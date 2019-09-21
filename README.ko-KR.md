@@ -9,7 +9,8 @@ Read this in other languages: [English](README.md), [한국어](README.ko-KR.md)
 ### 설치
 
 1. [FFmpeg](https://ffmpeg.org/)를 다운로드합니다.
-1. FFmpeg를 `ffmpeg` 폴더에 압축해제합니다.
+1. exe 파일이 있는 폴더에 ffmpeg 폴더를 생성합니다.
+1. 다운로드한 FFmpeg를 위에서 만든 `ffmpeg` 폴더에 압축해제합니다.
 
 ## 실행파일 생성
 

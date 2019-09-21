@@ -8,13 +8,14 @@ Read this in other languages: [English](README.md), [한국어](README.ko-KR.md)
 
 ### Installation
 
-1. Download [FFmpeg](https://ffmpeg.org/)
-1. Extract FFmpeg into `ffmpeg` directory
+1. Download [FFmpeg](https://ffmpeg.org/).
+1. Create a folder named `ffmpeg` in the folder where the exe is located.
+1. Extract the downloaded FFmpeg into the `ffmpeg` folder created above.
 
 ## Making Executable
 
-1. Install pyinstaller
+1. Install pyinstaller.
     ```
     pip install pyinstaller
     ```
-1. Run `build.bat`
+1. Run `build.bat`.
