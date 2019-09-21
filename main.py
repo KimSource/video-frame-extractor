@@ -1,5 +1,6 @@
 import re
 import os
+import sys
 import tkinter
 import tkinter.ttk
 import tkinter.filedialog
@@ -14,6 +15,12 @@ inputFileTypes = (
     ('All files', '*.*')
 )
 
+def getAssetFile(filename):
+    if not hasattr(sys, 'frozen'):
+        return os.path.join(os.path.dirname(__file__), filename)
+    else:
+        return os.path.join(sys.prefix, filename)
+
 class App:
     def __init__(self, root):
         self.inputFile = tkinter.StringVar()
@@ -26,6 +33,8 @@ class App:
         self.methodSpecificFrames = tkinter.StringVar()
 
         self.root = root
+
+        self.root.iconbitmap(getAssetFile('assets/icon.ico'))
 
         self.fileSection = tkinter.LabelFrame(window, text = 'File')
         self.fileSection.grid(column = 0, row = 0, padx = 8, pady = 4, sticky = 'NSEW')
