@@ -1,2 +1,2 @@
 @echo off
-pyinstaller --onefile --windowed main.py
+pyinstaller --onefile --windowed --icon assets/icon.ico main.py
