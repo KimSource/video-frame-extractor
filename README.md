@@ -2,6 +2,8 @@
 
 GUI Tool for extracting video frames
 
+Read this in other languages: [English](README.md), [한국어](README.ko-KR.md)
+
 ## Getting Started
 
 ### Installation
