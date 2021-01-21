@@ -167,7 +167,7 @@ class App:
             select = "'not(mod(n,{n}))'".format(n = self.methodEveryNFramesN.get().strip())
         else:
             frames =  re.compile(' +| *,+ *').split(self.methodSpecificFrames.get().strip())
-            select = "'" + '+'.join(['eq(n,{n})'.format(n = n) for n in frames]) + "'"
+            select = "'" + '+'.join(['eq(pts,{pts})'.format(pts = pts) for pts in frames]) + "'"
         return 'select={select}'.format(select = select)
 
     def getCommand(self):
