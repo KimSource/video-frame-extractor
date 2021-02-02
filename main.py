@@ -91,11 +91,14 @@ class App:
         self.methodEveryNFramesNEntry = tkinter.Entry(self.methodEveryNFramesParamsSection, textvariable = self.methodEveryNFramesN)
         self.methodEveryNFramesNEntry.grid(column = 1, row = 0, sticky = 'EW')
 
-        self.methodSpecificFramesRadio = tkinter.Radiobutton(self.methodSection, text = 'Specific frames', value = 1, variable = self.methodRadioVariety)
-        self.methodSpecificFramesRadio.grid(column = 0, row = 2, sticky = 'W')
+        self.methodSpecificFramesMethod1Radio = tkinter.Radiobutton(self.methodSection, text = 'Specific frames (Method 1)', value = 1, variable = self.methodRadioVariety)
+        self.methodSpecificFramesMethod1Radio.grid(column = 0, row = 2, sticky = 'W')
+
+        self.methodSpecificFramesMethod2Radio = tkinter.Radiobutton(self.methodSection, text = 'Specific frames (Method 2)', value = 2, variable = self.methodRadioVariety)
+        self.methodSpecificFramesMethod2Radio.grid(column = 0, row = 3, sticky = 'W')
 
         self.methodSpecificFramesParamsSection = tkinter.Frame(self.methodSection)
-        self.methodSpecificFramesParamsSection.grid(column = 0, row = 3, sticky = 'EW')
+        self.methodSpecificFramesParamsSection.grid(column = 0, row = 4, sticky = 'EW')
         self.methodSpecificFramesParamsSection.grid_columnconfigure(0, weight = 1)
 
         self.methodSpecificFramesLabel = tkinter.Label(self.methodSpecificFramesParamsSection, text = 'Frame numbers (split with spaces or commas)')
@@ -165,6 +168,9 @@ class App:
         select = ''
         if self.methodRadioVariety.get() == 0:
             select = "'not(mod(n,{n}))'".format(n = self.methodEveryNFramesN.get().strip())
+        elif self.methodRadioVariety.get() == 1:
+            frames =  re.compile(' +| *,+ *').split(self.methodSpecificFrames.get().strip())
+            select = "'" + '+'.join(['eq(n,{n})'.format(n = n) for n in frames]) + "'"
         else:
             frames =  re.compile(' +| *,+ *').split(self.methodSpecificFrames.get().strip())
             select = "'" + '+'.join(['eq(pts,{pts})'.format(pts = pts) for pts in frames]) + "'"
