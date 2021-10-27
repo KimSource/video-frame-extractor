@@ -2,6 +2,7 @@ import re
 import os
 import sys
 import tkinter
+from tkinter.constants import DISABLED, NORMAL
 import tkinter.ttk
 import tkinter.filedialog
 
@@ -27,6 +28,8 @@ class App:
         self.outputDirectory = tkinter.StringVar()
         self.outputFileType = tkinter.StringVar()
         self.outputJpgQuality = tkinter.DoubleVar(value = 1)
+        self.outputWebpQuality = tkinter.DoubleVar(value = 75)
+        self.outputLossless = tkinter.BooleanVar()
 
         self.methodRadioVariety = tkinter.IntVar(value = 0)
         self.methodEveryNFramesN = tkinter.StringVar()
@@ -61,7 +64,7 @@ class App:
         self.outputFileTypeLabel = tkinter.Label(self.fileSection, text = 'Output file type')
         self.outputFileTypeLabel.grid(column = 0, row = 2)
 
-        self.outputFileTypeCombobox = tkinter.ttk.Combobox(self.fileSection, state = 'readonly', values = ('.jpg', '.png'), textvariable = self.outputFileType)
+        self.outputFileTypeCombobox = tkinter.ttk.Combobox(self.fileSection, state = 'readonly', values = ('.jpg', '.png', '.webp'), textvariable = self.outputFileType)
         self.outputFileTypeCombobox.grid(column = 1, row = 2, columnspan = 2, sticky = 'E')
         self.outputFileTypeCombobox.current(0)
 
@@ -73,6 +76,19 @@ class App:
 
         self.outputJpgQualityValueLabel = tkinter.Label(self.fileSection, text = '1')
         self.outputJpgQualityValueLabel.grid(column = 2, row = 3)
+
+        self.outputWebpQualityLabel = tkinter.Label(self.fileSection, text = 'WebP Quality\n(Higher is better)')
+        self.outputWebpQualityLabel.grid(column = 0, row = 4)
+
+        self.outputWebpQualityScale = tkinter.ttk.Scale(self.fileSection, variable = self.outputWebpQuality, orient = 'horizontal', from_ = 0, to_ = 100)
+        self.outputWebpQualityScale.grid(column = 1, row = 4, sticky = 'EW')
+        self.outputWebpQualityScale.state(['disabled'])
+
+        self.outputWebpQualityValueLabel = tkinter.Label(self.fileSection, text = '75')
+        self.outputWebpQualityValueLabel.grid(column = 2, row = 4)
+
+        self.outputLosslessCheckButton = tkinter.Checkbutton(self.fileSection, text = 'Lossless (WebP only)', variable = self.outputLossless, state = DISABLED)
+        self.outputLosslessCheckButton.grid(column = 1, row = 5)
 
         self.methodSection = tkinter.LabelFrame(root, text = 'Method')
         self.methodSection.grid(column = 0, row = 1, padx = 8, pady = 4, sticky = 'NSEW')
@@ -129,6 +145,8 @@ class App:
         self.outputDirectory.trace('w', lambda name, index, mode: self.updateCommand())
         self.outputFileType.trace('w', lambda name, index, mode: self.updateCommandAndQuality())
         self.outputJpgQuality.trace('w', lambda name, index, mode: self.updateCommandAndQuality())
+        self.outputWebpQuality.trace('w', lambda name, index, mode: self.updateCommandAndQuality())
+        self.outputLossless.trace('w', lambda name, index, mode: self.updateCommandAndQuality())
         self.methodRadioVariety.trace('w', lambda name, index, mode: self.updateCommand())
         self.methodEveryNFramesN.trace('w', lambda name, index, mode: self.updateCommand())
         self.methodSpecificFrames.trace('w', lambda name, index, mode: self.updateCommand())
@@ -164,6 +182,15 @@ class App:
 
         self.outputJpgQualityValueLabel.config(text = str(int(self.outputJpgQualityScale.get())))
 
+        if self.outputFileType.get() == '.webp':
+            self.outputWebpQualityScale.state(['!disabled'])
+            self.outputLosslessCheckButton.configure(state=NORMAL)
+        else:
+            self.outputWebpQualityScale.state(['disabled'])
+            self.outputLosslessCheckButton.configure(state=DISABLED)
+
+        self.outputWebpQualityValueLabel.config(text = str(int(self.outputWebpQualityScale.get())))
+
     def getSelect(self):
         select = ''
         if self.methodRadioVariety.get() == 0:
@@ -184,6 +211,16 @@ class App:
                 str(int(self.outputJpgQualityScale.get()))
             ]
 
+        webpQualityOption = []
+        if self.outputFileType.get() == '.webp':
+            lossless = self.outputLossless.get() == True;
+            webpQualityOption = [
+                '-qscale:v',
+                str(int(self.outputWebpQualityScale.get())),
+                '-lossless',
+                '1' if lossless else '0'
+            ]
+
         return [
             'ffmpeg\\bin\\ffmpeg.exe',
             '-i',
@@ -195,6 +232,7 @@ class App:
             '-frame_pts',
             '1',
             *jpgQualityOption,
+            *webpQualityOption,
             '"' + self.outputDirectory.get() + '/%d' + self.outputFileType.get() + '"'
         ]
 
