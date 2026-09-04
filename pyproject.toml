@@ -1,0 +1,12 @@
+[project]
+name = "video-frame-extractor"
+version = "0.1.0.dev0"
+description = "A Windows GUI for extracting video frames with FFmpeg"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+build = [
+    "pyinstaller>=6.22,<7",
+]
