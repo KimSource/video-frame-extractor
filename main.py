@@ -3,6 +3,7 @@ import sys
 import shutil
 import subprocess
 import threading
+import ctypes
 import tkinter
 from tkinter.constants import DISABLED, NORMAL
 import tkinter.ttk
@@ -48,6 +49,7 @@ class App:
         self.extractProcess = None
         self.isExtracting = False
         self.isCancelRequested = False
+        self.isShuttingDown = False
 
         self.root = root
 
@@ -230,6 +232,9 @@ class App:
 
     def runExtract(self, commandArgs):
         try:
+            if self.isShuttingDown:
+                return
+
             self.extractProcess = subprocess.Popen(
                 commandArgs,
                 stdout = subprocess.PIPE,
@@ -238,11 +243,15 @@ class App:
                 encoding = 'utf-8',
                 errors = 'replace',
             )
+            if self.isShuttingDown:
+                self.extractProcess.terminate()
             stdout, stderr = self.extractProcess.communicate()
             returncode = self.extractProcess.returncode
-            self.root.after(0, self.finishExtract, returncode, stderr)
+            if not self.isShuttingDown:
+                self.root.after(0, self.finishExtract, returncode, stderr)
         except OSError as error:
-            self.root.after(0, self.failExtract, str(error))
+            if not self.isShuttingDown:
+                self.root.after(0, self.failExtract, str(error))
 
     def cancelExtract(self):
         self.isCancelRequested = True
@@ -369,15 +378,54 @@ class App:
     def getDisplayCommand(self):
         return subprocess.list2cmdline(self.getCommandArgs())
 
+    def close(self):
+        if self.isShuttingDown:
+            return
+
+        self.isShuttingDown = True
+        self.stopExtractProcess()
+        self.root.destroy()
+
+    def stopExtractProcess(self):
+        process = self.extractProcess
+        if process is not None and process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout = 2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+
 if __name__ == '__main__':
     window = tkinter.Tk()
     window.title('Video Frame Extractor')
     window.grid_columnconfigure(0, weight = 1)
     # window.resizable(False, False)
-    App(window)
+    app = App(window)
+    window.protocol('WM_DELETE_WINDOW', app.close)
     window.update()
     w = window.winfo_width()
     h = window.winfo_height()
     if w < 400:
         window.geometry('{w}x{h}'.format(w = 400, h = h))
-    window.mainloop()
+    # Python's normal SIGINT handler can remain pending while Tkinter is
+    # inside Tcl's Windows event loop.  A native console handler lets Ctrl+C
+    # clean up immediately, without waiting for another GUI event.
+    consoleHandler = None
+    if os.name == 'nt':
+        consoleHandlerType = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_uint)
+
+        def handleConsoleEvent(eventType):
+            if eventType in (0, 2):  # CTRL_C_EVENT / CTRL_CLOSE_EVENT
+                app.isShuttingDown = True
+                app.stopExtractProcess()
+                os._exit(0)
+            return False
+
+        consoleHandler = consoleHandlerType(handleConsoleEvent)
+        ctypes.windll.kernel32.SetConsoleCtrlHandler(consoleHandler, True)
+
+    try:
+        window.mainloop()
+    except KeyboardInterrupt:
+        app.close()
