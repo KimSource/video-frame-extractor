@@ -1,6 +1,7 @@
 import re
 import os
 import sys
+import shutil
 import subprocess
 import tkinter
 from tkinter.constants import DISABLED, NORMAL
@@ -24,6 +25,14 @@ def getAssetFile(filename):
     else:
         return os.path.join(sys.prefix, filename)
 
+def getLocalFfmpegFile():
+    if hasattr(sys, 'frozen'):
+        baseDirectory = os.path.dirname(sys.executable)
+    else:
+        baseDirectory = os.path.dirname(os.path.abspath(__file__))
+
+    return os.path.join(baseDirectory, 'ffmpeg', 'bin', 'ffmpeg.exe')
+
 class App:
     def __init__(self, root):
         self.inputFile = tkinter.StringVar()
@@ -36,6 +45,7 @@ class App:
         self.methodRadioVariety = tkinter.IntVar(value = 0)
         self.methodEveryNFramesN = tkinter.StringVar()
         self.methodSpecificFrames = tkinter.StringVar()
+        self.ffmpegSource = tkinter.IntVar(value = 0)
 
         self.root = root
 
@@ -125,8 +135,28 @@ class App:
         self.methodSpecificFramesEntry = tkinter.Entry(self.methodSpecificFramesParamsSection, textvariable = self.methodSpecificFrames)
         self.methodSpecificFramesEntry.grid(column = 0, row = 1, sticky = 'EW')
 
+        self.ffmpegSection = tkinter.LabelFrame(root, text = 'FFmpeg')
+        self.ffmpegSection.grid(column = 0, row = 2, padx = 8, pady = 4, sticky = 'NSEW')
+        self.ffmpegSection.grid_columnconfigure(0, weight = 1)
+
+        self.localFfmpegRadio = tkinter.Radiobutton(
+            self.ffmpegSection,
+            text = 'Use FFmpeg next to the application',
+            value = 0,
+            variable = self.ffmpegSource,
+        )
+        self.localFfmpegRadio.grid(column = 0, row = 0, padx = 4, sticky = 'W')
+
+        self.systemFfmpegRadio = tkinter.Radiobutton(
+            self.ffmpegSection,
+            text = 'Use FFmpeg from system PATH',
+            value = 1,
+            variable = self.ffmpegSource,
+        )
+        self.systemFfmpegRadio.grid(column = 0, row = 1, padx = 4, sticky = 'W')
+
         self.infoSection = tkinter.Frame(root)
-        self.infoSection.grid(column = 0, row = 2, padx = 8, pady = 4, sticky = 'NSEW')
+        self.infoSection.grid(column = 0, row = 3, padx = 8, pady = 4, sticky = 'NSEW')
         self.infoSection.grid_columnconfigure(0, weight = 1)
 
         self.commandToRunLabel = tkinter.Label(self.infoSection, text = 'Command to run')
@@ -137,7 +167,7 @@ class App:
         self.commandToRunText.config(state = tkinter.DISABLED)
 
         self.actionSection = tkinter.Frame(root)
-        self.actionSection.grid(column = 0, row = 3, padx = 8, pady = 4, sticky = 'NSEW')
+        self.actionSection.grid(column = 0, row = 4, padx = 8, pady = 4, sticky = 'NSEW')
         self.actionSection.grid_columnconfigure(0, weight = 1)
 
         self.extractButton = tkinter.Button(self.actionSection, text = 'Extract', command = self.startExtract)
@@ -152,6 +182,7 @@ class App:
         self.methodRadioVariety.trace_add('write', lambda name, index, mode: self.updateCommand())
         self.methodEveryNFramesN.trace_add('write', lambda name, index, mode: self.updateCommand())
         self.methodSpecificFrames.trace_add('write', lambda name, index, mode: self.updateCommand())
+        self.ffmpegSource.trace_add('write', lambda name, index, mode: self.updateCommand())
 
         self.updateCommand()
 
@@ -189,9 +220,14 @@ class App:
             )
 
     def updateCommand(self):
+        try:
+            displayCommand = self.getDisplayCommand()
+        except FileNotFoundError as error:
+            displayCommand = str(error)
+
         self.commandToRunText.config(state = tkinter.NORMAL)
         self.commandToRunText.delete('1.0', tkinter.END)
-        self.commandToRunText.insert('1.0', self.getDisplayCommand())
+        self.commandToRunText.insert('1.0', displayCommand)
         self.commandToRunText.config(state = tkinter.DISABLED)
 
     def updateCommandAndQuality(self):
@@ -228,6 +264,23 @@ class App:
             select = '+'.join(['eq(pts,{pts})'.format(pts = pts) for pts in frames])
         return 'select={select}'.format(select = select)
 
+    def getFfmpegFile(self):
+        if self.ffmpegSource.get() == 0:
+            ffmpegFile = getLocalFfmpegFile()
+            if os.path.isfile(ffmpegFile):
+                return ffmpegFile
+            raise FileNotFoundError(
+                'Unable to find FFmpeg next to the application: '
+                + ffmpegFile
+            )
+
+        ffmpegFile = shutil.which('ffmpeg')
+        if ffmpegFile is not None:
+            return ffmpegFile
+        raise FileNotFoundError(
+            'Unable to find FFmpeg in the system PATH.'
+        )
+
     def getCommandArgs(self):
         jpgQualityOption = []
         if self.outputFileType.get() == '.jpg':
@@ -247,7 +300,7 @@ class App:
             ]
 
         return [
-            'ffmpeg\\bin\\ffmpeg.exe',
+            self.getFfmpegFile(),
             '-i',
             self.inputFile.get(),
             '-vf',
