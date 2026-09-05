@@ -89,7 +89,7 @@ class App:
 
         self.root.iconbitmap(getAssetFile('assets/icon.ico'))
 
-        self.fileSection = tkinter.LabelFrame(window, text = 'File')
+        self.fileSection = tkinter.LabelFrame(self.root, text = 'File')
         self.fileSection.grid(column = 0, row = 0, padx = 8, pady = 4, sticky = 'NSEW')
         self.fileSection.columnconfigure(1, weight = 1)
 
