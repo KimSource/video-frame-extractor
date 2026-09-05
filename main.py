@@ -240,6 +240,7 @@ class App:
 
         self.commandToRunText = tkinter.Text(self.infoSection, width = 0, height = 4)
         self.commandToRunText.grid(column = 0, row = 1, sticky = 'EW')
+        self.commandToRunTextDefaultForeground = self.commandToRunText.cget('foreground')
         self.commandToRunText.config(state = tkinter.DISABLED)
 
         # Keep this area separate so the status label can later be replaced
@@ -461,10 +462,13 @@ class App:
     def updateCommand(self):
         try:
             displayCommand = self.getDisplayCommand()
+            foreground = self.commandToRunTextDefaultForeground
         except (FileNotFoundError, ValueError) as error:
             displayCommand = str(error)
+            foreground = 'red'
 
         self.commandToRunText.config(state = tkinter.NORMAL)
+        self.commandToRunText.configure(foreground = foreground)
         self.commandToRunText.delete('1.0', tkinter.END)
         self.commandToRunText.insert('1.0', displayCommand)
         self.commandToRunText.config(state = tkinter.DISABLED)
