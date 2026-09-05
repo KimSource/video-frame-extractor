@@ -161,17 +161,17 @@ class App:
             validatecommand = (self.root.register(self.validateFrameInterval), '%P'),
         )
 
-        self.methodSpecificFramesMethod1Radio = tkinter.Radiobutton(self.methodSection, text = 'Specific frames (Method 1)', value = 1, variable = self.methodRadioVariety)
+        self.methodSpecificFramesMethod1Radio = tkinter.Radiobutton(self.methodSection, text = 'Specific frames (Method 1: frame numbers, starting at 0)', value = 1, variable = self.methodRadioVariety)
         self.methodSpecificFramesMethod1Radio.grid(column = 0, row = 2, sticky = 'W')
 
-        self.methodSpecificFramesMethod2Radio = tkinter.Radiobutton(self.methodSection, text = 'Specific frames (Method 2)', value = 2, variable = self.methodRadioVariety)
+        self.methodSpecificFramesMethod2Radio = tkinter.Radiobutton(self.methodSection, text = 'Specific frames (Method 2: PTS values)', value = 2, variable = self.methodRadioVariety)
         self.methodSpecificFramesMethod2Radio.grid(column = 0, row = 3, sticky = 'W')
 
         self.methodSpecificFramesParamsSection = tkinter.Frame(self.methodSection)
         self.methodSpecificFramesParamsSection.grid(column = 0, row = 4, sticky = 'EW')
         self.methodSpecificFramesParamsSection.grid_columnconfigure(0, weight = 1)
 
-        self.methodSpecificFramesLabel = tkinter.Label(self.methodSpecificFramesParamsSection, text = 'Frame numbers (split with spaces or commas)')
+        self.methodSpecificFramesLabel = tkinter.Label(self.methodSpecificFramesParamsSection, text = 'Values (split with spaces or commas)')
         self.methodSpecificFramesLabel.grid(column = 0, row = 0, sticky = 'W')
 
         self.methodSpecificFramesEntry = tkinter.Entry(self.methodSpecificFramesParamsSection, textvariable = self.methodSpecificFrames)
