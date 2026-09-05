@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import threading
 import ctypes
+import struct
 import tkinter
 from tkinter.constants import DISABLED, NORMAL
 import tkinter.ttk
@@ -64,6 +65,35 @@ def getFfmpegVersion(ffmpegFile):
     else:
         shortVersion = versionParts[0]
     return f'v{shortVersion}'
+
+
+def isConsoleExecutable(filename):
+    """Read the PE header without launching the executable."""
+    try:
+        with open(filename, 'rb') as executable:
+            if executable.read(2) != b'MZ':
+                return False
+            executable.seek(0x3C)
+            peOffset = struct.unpack('<I', executable.read(4))[0]
+            executable.seek(peOffset)
+            if executable.read(4) != b'PE\0\0':
+                return False
+
+            executable.seek(peOffset + 20)
+            optionalHeaderSize = struct.unpack('<H', executable.read(2))[0]
+            executable.seek(peOffset + 24)
+            optionalHeader = executable.read(optionalHeaderSize)
+            if len(optionalHeader) < 70:
+                return False
+
+            optionalHeaderMagic = struct.unpack_from('<H', optionalHeader, 0)[0]
+            if optionalHeaderMagic not in (0x10B, 0x20B):
+                return False
+
+            subsystem = struct.unpack_from('<H', optionalHeader, 68)[0]
+            return subsystem == 3  # IMAGE_SUBSYSTEM_WINDOWS_CUI
+    except (OSError, struct.error):
+        return False
 
 class App:
     def __init__(self, root):
@@ -333,6 +363,12 @@ class App:
             filetypes = (('Executable files', '*.exe'), ('All files', '*.*')),
         )
         if selected != '':
+            if not isConsoleExecutable(selected):
+                tkinter.messagebox.showerror(
+                    'Invalid FFmpeg file',
+                    'The selected file is not a valid Windows console executable.',
+                )
+                return
             self.customFfmpegFile.set(selected)
             self.customFfmpegVersionLabel.configure(text = getFfmpegVersion(selected))
 
