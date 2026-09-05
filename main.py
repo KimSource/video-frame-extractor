@@ -78,6 +78,7 @@ class App:
         self.methodEveryNFramesN = tkinter.StringVar()
         self.methodSpecificFrames = tkinter.StringVar()
         self.ffmpegSource = tkinter.IntVar(value = 0)
+        self.customFfmpegFile = tkinter.StringVar()
         self.extractProcess = None
         self.isExtracting = False
         self.isCancelRequested = False
@@ -195,6 +196,28 @@ class App:
         self.systemFfmpegVersionLabel = tkinter.Label(self.ffmpegSection, text = '')
         self.systemFfmpegVersionLabel.grid(column = 1, row = 1, padx = 4, sticky = 'W')
 
+        self.customFfmpegRadio = tkinter.Radiobutton(
+            self.ffmpegSection,
+            text = 'Use FFmpeg at a custom location',
+            value = 2,
+            variable = self.ffmpegSource,
+        )
+        self.customFfmpegRadio.grid(column = 0, row = 2, padx = 4, sticky = 'W')
+        self.customFfmpegVersionLabel = tkinter.Label(self.ffmpegSection, text = '')
+        self.customFfmpegVersionLabel.grid(column = 1, row = 2, padx = 4, sticky = 'W')
+        self.customFfmpegEntry = tkinter.Entry(
+            self.ffmpegSection,
+            textvariable = self.customFfmpegFile,
+        )
+        self.customFfmpegEntry.grid(column = 0, row = 3, columnspan = 2, padx = 4, sticky = 'EW')
+        self.customFfmpegSelectButton = tkinter.Button(
+            self.ffmpegSection,
+            text = 'Select',
+            command = self.selectCustomFfmpegFile,
+        )
+        self.customFfmpegSelectButton.grid(column = 2, row = 3, padx = 4, sticky = 'W')
+        self.ffmpegSection.grid_columnconfigure(0, weight = 1)
+
         self.infoSection = tkinter.Frame(root)
         self.infoSection.grid(column = 0, row = 3, padx = 8, pady = 4, sticky = 'NSEW')
         self.infoSection.grid_columnconfigure(0, weight = 1)
@@ -235,9 +258,11 @@ class App:
         self.methodEveryNFramesN.trace_add('write', lambda name, index, mode: self.updateCommand())
         self.methodSpecificFrames.trace_add('write', lambda name, index, mode: self.updateCommand())
         self.ffmpegSource.trace_add('write', lambda name, index, mode: self.updateCommand())
+        self.customFfmpegFile.trace_add('write', lambda name, index, mode: self.updateCommand())
 
         self.localFfmpegVersionLabel.configure(text = 'Checking...')
         self.systemFfmpegVersionLabel.configure(text = 'Checking...')
+        self.customFfmpegVersionLabel.configure(text = 'Not selected')
         threading.Thread(target = self.checkFfmpegVersions, daemon = True).start()
         self.updateCommand()
         self.updateExtractButton()
@@ -260,6 +285,15 @@ class App:
         selected = tkinter.filedialog.askdirectory(title = 'Select Output Directory')
         if selected != '':
             self.outputDirectory.set(selected)
+
+    def selectCustomFfmpegFile(self):
+        selected = tkinter.filedialog.askopenfilename(
+            title = 'Select FFmpeg executable',
+            filetypes = (('Executable files', '*.exe'), ('All files', '*.*')),
+        )
+        if selected != '':
+            self.customFfmpegFile.set(selected)
+            self.customFfmpegVersionLabel.configure(text = getFfmpegVersion(selected))
 
     def startExtract(self):
         errors = self.validateInputs()
@@ -402,11 +436,20 @@ class App:
                 + ffmpegFile
             )
 
-        ffmpegFile = shutil.which('ffmpeg')
-        if ffmpegFile is not None:
+        if self.ffmpegSource.get() == 1:
+            ffmpegFile = shutil.which('ffmpeg')
+            if ffmpegFile is not None:
+                return ffmpegFile
+            raise FileNotFoundError(
+                'Unable to find FFmpeg in the system PATH.'
+            )
+
+        ffmpegFile = self.customFfmpegFile.get().strip()
+        if os.path.isfile(ffmpegFile):
             return ffmpegFile
         raise FileNotFoundError(
-            'Unable to find FFmpeg in the system PATH.'
+            'Unable to find FFmpeg at the custom location: '
+            + (ffmpegFile or '(not selected)')
         )
 
     def getCommandArgs(self):
