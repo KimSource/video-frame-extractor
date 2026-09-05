@@ -360,6 +360,10 @@ class App:
                 return
 
             duration = self.getInputDuration(commandArgs[2])
+            if self.isCancelRequested:
+                self.root.after(0, self.finishExtract, -1, '')
+                return
+
             self.extractProcess = subprocess.Popen(
                 commandArgs,
                 stdout = subprocess.PIPE,
@@ -368,7 +372,7 @@ class App:
                 encoding = 'utf-8',
                 errors = 'replace',
             )
-            if self.isShuttingDown:
+            if self.isShuttingDown or self.isCancelRequested:
                 self.extractProcess.terminate()
             outputLines = []
             for line in self.extractProcess.stdout:
@@ -387,10 +391,10 @@ class App:
 
     def cancelExtract(self):
         self.isCancelRequested = True
+        self.progressStatusLabel.configure(text = 'Cancelling...')
+        self.cancelButton.configure(state = DISABLED)
         if self.extractProcess is not None and self.extractProcess.poll() is None:
             self.extractProcess.terminate()
-            self.progressStatusLabel.configure(text = 'Cancelling...')
-            self.cancelButton.configure(state = DISABLED)
 
     def updateProgress(self, percent):
         self.progressPercent.set(percent)
