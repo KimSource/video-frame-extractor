@@ -20,10 +20,8 @@ inputFileTypes = (
 )
 
 def getAssetFile(filename):
-    if not hasattr(sys, 'frozen'):
-        return os.path.join(os.path.dirname(__file__), filename)
-    else:
-        return os.path.join(sys.prefix, filename)
+    baseDirectory = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(baseDirectory, filename)
 
 def getLocalFfmpegFile():
     if hasattr(sys, 'frozen'):
