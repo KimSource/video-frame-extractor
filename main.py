@@ -83,6 +83,7 @@ class App:
         self.isExtracting = False
         self.isCancelRequested = False
         self.isShuttingDown = False
+        self.progressPercent = tkinter.DoubleVar(value = 0)
 
         self.root = root
 
@@ -238,15 +239,23 @@ class App:
         self.progressStatusLabel = tkinter.Label(self.progressSection, text = 'Ready')
         self.progressStatusLabel.grid(column = 0, row = 0, padx = 4, sticky = 'W')
 
-        self.cancelButton = tkinter.Button(self.progressSection, text = 'Cancel', command = self.cancelExtract, state = DISABLED)
-        self.cancelButton.grid(column = 1, row = 0, padx = 4)
+        self.progressBar = tkinter.ttk.Progressbar(
+            self.progressSection,
+            variable = self.progressPercent,
+            maximum = 100,
+        )
+        self.progressBar.grid(column = 0, row = 1, columnspan = 2, padx = 4, pady = (2, 4), sticky = 'EW')
 
         self.actionSection = tkinter.Frame(root)
         self.actionSection.grid(column = 0, row = 5, padx = 8, pady = 4, sticky = 'NSEW')
         self.actionSection.grid_columnconfigure(0, weight = 1)
+        self.actionSection.grid_columnconfigure(1, weight = 1)
 
         self.extractButton = tkinter.Button(self.actionSection, text = 'Extract', command = self.startExtract)
-        self.extractButton.grid(column = 0, row = 0)
+        self.extractButton.grid(column = 0, row = 0, padx = (0, 4), pady = 4, sticky = 'EW')
+
+        self.cancelButton = tkinter.Button(self.actionSection, text = 'Cancel', command = self.cancelExtract, state = DISABLED)
+        self.cancelButton.grid(column = 1, row = 0, padx = (4, 0), pady = 4, sticky = 'EW')
 
         self.inputFile.trace_add('write', lambda name, index, mode: self.updateCommand())
         self.outputDirectory.trace_add('write', lambda name, index, mode: self.updateCommand())
@@ -308,6 +317,7 @@ class App:
         self.extractButton.configure(state = DISABLED)
         self.cancelButton.configure(state = NORMAL)
         self.progressStatusLabel.configure(text = 'Extracting...')
+        self.progressPercent.set(0)
         self.isExtracting = True
         self.isCancelRequested = False
         threading.Thread(target = self.runExtract, args = (self.getCommandArgs(),), daemon = True).start()
@@ -317,20 +327,28 @@ class App:
             if self.isShuttingDown:
                 return
 
+            duration = self.getInputDuration(commandArgs[2])
             self.extractProcess = subprocess.Popen(
                 commandArgs,
                 stdout = subprocess.PIPE,
-                stderr = subprocess.PIPE,
+                stderr = subprocess.STDOUT,
                 text = True,
                 encoding = 'utf-8',
                 errors = 'replace',
             )
             if self.isShuttingDown:
                 self.extractProcess.terminate()
-            stdout, stderr = self.extractProcess.communicate()
+            outputLines = []
+            for line in self.extractProcess.stdout:
+                outputLines.append(line)
+                if line.startswith('out_time_us=') and duration:
+                    elapsed = int(line.split('=', 1)[1]) / 1_000_000
+                    percent = min(100, elapsed / duration * 100)
+                    self.root.after(0, self.updateProgress, percent)
+            self.extractProcess.wait()
             returncode = self.extractProcess.returncode
             if not self.isShuttingDown:
-                self.root.after(0, self.finishExtract, returncode, stderr)
+                self.root.after(0, self.finishExtract, returncode, ''.join(outputLines))
         except OSError as error:
             if not self.isShuttingDown:
                 self.root.after(0, self.failExtract, str(error))
@@ -342,6 +360,25 @@ class App:
             self.progressStatusLabel.configure(text = 'Cancelling...')
             self.cancelButton.configure(state = DISABLED)
 
+    def updateProgress(self, percent):
+        self.progressPercent.set(percent)
+        self.progressStatusLabel.configure(text = f'Extracting... {percent:.1f}%')
+
+    def getInputDuration(self, inputFile):
+        ffprobeFile = os.path.join(os.path.dirname(self.getFfmpegFile()), 'ffprobe.exe')
+        if not os.path.isfile(ffprobeFile):
+            return None
+        try:
+            result = subprocess.run(
+                [ffprobeFile, '-v', 'error', '-show_entries', 'format=duration',
+                 '-of', 'default=noprint_wrappers=1:nokey=1', inputFile],
+                capture_output = True, text = True, timeout = 10,
+                creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0),
+            )
+            return float(result.stdout.strip())
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return None
+
     def finishExtract(self, returncode, stderr):
         self.extractProcess = None
         self.isExtracting = False
@@ -349,6 +386,7 @@ class App:
         if self.isCancelRequested:
             self.progressStatusLabel.configure(text = 'Cancelled')
         elif returncode == 0:
+            self.progressPercent.set(100)
             self.progressStatusLabel.configure(text = 'Completed')
         else:
             self.progressStatusLabel.configure(text = 'Failed')
@@ -362,6 +400,7 @@ class App:
         self.extractProcess = None
         self.isExtracting = False
         self.cancelButton.configure(state = DISABLED)
+        self.progressPercent.set(0)
         if self.isCancelRequested:
             self.progressStatusLabel.configure(text = 'Cancelled')
         else:
