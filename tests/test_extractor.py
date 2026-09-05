@@ -35,13 +35,13 @@ class ExtractorTests(unittest.TestCase):
     def test_build_select_filter_for_specific_n_frames(self):
         self.assertEqual(
             build_select_filter(1, '', '1, 4'),
-            'select=eq(n,1)+eq(n,4)',
+            r'select=eq(n\,1)+eq(n\,4)',
         )
 
     def test_build_select_filter_for_specific_pts_frames(self):
         self.assertEqual(
             build_select_filter(2, '', '0 3072'),
-            'select=eq(pts,0)+eq(pts,3072)',
+            r'select=eq(pts\,0)+eq(pts\,3072)',
         )
 
     def test_build_command_args_keeps_paths_as_separate_arguments(self):

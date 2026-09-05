@@ -57,10 +57,10 @@ def build_select_filter(method, frame_interval, specific_frames):
         select = r'not(mod(n\,{n}))'.format(n=interval)
     elif method == 1:
         frames = parse_specific_frames(specific_frames)
-        select = '+'.join(f'eq(n,{frame})' for frame in frames)
+        select = '+'.join(f'eq(n\\,{frame})' for frame in frames)
     else:
         frames = parse_specific_frames(specific_frames)
-        select = '+'.join(f'eq(pts,{frame})' for frame in frames)
+        select = '+'.join(f'eq(pts\\,{frame})' for frame in frames)
 
     return f'select={select}'
 
