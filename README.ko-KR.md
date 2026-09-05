@@ -14,10 +14,11 @@ FFmpeg으로 동영상 프레임을 추출하는 간단한 Windows GUI 도구입
 ## 요구 사항
 
 - Windows
-- `ffmpeg\bin\ffmpeg.exe` 경로에 FFmpeg 배치
+- 애플리케이션 옆에 FFmpeg를 배치하거나 시스템 `PATH`에 등록
 - 소스에서 실행할 경우 Tkinter가 포함된 Python
 
-애플리케이션은 항상 위 상대 경로에서 FFmpeg를 찾습니다. 다음과 같이 파일을 배치해야 합니다.
+기본적으로 애플리케이션은 애플리케이션 또는 소스 파일 옆의 다음 상대 경로에서
+FFmpeg를 찾습니다.
 
 ```text
 video-frame-extractor/
@@ -26,6 +27,9 @@ video-frame-extractor/
    └─ bin/
       └─ ffmpeg.exe
 ```
+
+또는 시스템 `PATH`에 등록된 `ffmpeg.exe`를 사용할 수 있습니다. 실행 후 GUI의
+FFmpeg 섹션에서 사용할 실행 파일을 선택합니다.
 
 ## 소스에서 실행
 
@@ -44,6 +48,16 @@ video-frame-extractor/
    ```
 
 애플리케이션 실행에는 Python 표준 라이브러리만 사용합니다.
+
+## 테스트 실행
+
+개발자용 자동 테스트를 실행하려면 프로젝트 루트에서 다음 명령을 실행합니다.
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+테스트는 Python 표준 라이브러리의 `unittest`를 사용합니다.
 
 ## 실행 파일 빌드
 

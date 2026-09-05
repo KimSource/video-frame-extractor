@@ -14,10 +14,10 @@ Read this in other languages: [English](README.md), [한국어](README.ko-KR.md)
 ## Requirements
 
 - Windows
-- FFmpeg at `ffmpeg\bin\ffmpeg.exe`
+- FFmpeg next to the application or available on the system `PATH`
 - Python with Tkinter when running from source
 
-The application always looks for FFmpeg at the relative path above. The expected layout is:
+By default, the application looks for FFmpeg next to the application (or source file):
 
 ```text
 video-frame-extractor/
@@ -26,6 +26,9 @@ video-frame-extractor/
    └─ bin/
       └─ ffmpeg.exe
 ```
+
+You can also select an `ffmpeg.exe` found on the system `PATH` in the application's
+FFmpeg section.
 
 ## Running from Source
 
@@ -44,6 +47,16 @@ video-frame-extractor/
    ```
 
 The application itself uses only the Python standard library.
+
+## Running Tests
+
+To run the automated tests from the project root:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+The tests use Python's standard-library `unittest` module.
 
 ## Building the Executable
 
