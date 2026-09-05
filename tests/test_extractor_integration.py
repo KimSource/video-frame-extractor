@@ -26,7 +26,13 @@ class ExtractorIntegrationTests(unittest.TestCase):
                 str(FFMPEG_FILE),
                 '-y',
                 '-f', 'lavfi',
-                '-i', 'color=c=red:s=16x16:r=1:d=3',
+                '-i', (
+                    "nullsrc=s=16x16:r=1:d=3,"
+                    "geq="
+                    "r='if(eq(N,0),255,0)':"
+                    "g='if(eq(N,1),255,0)':"
+                    "b='if(eq(N,2),255,0)'"
+                ),
                 str(self.inputFile),
             ],
             capture_output=True,
@@ -53,6 +59,32 @@ class ExtractorIntegrationTests(unittest.TestCase):
             if line.strip()
         ]
 
+    def getCenterPixel(self, imageFile):
+        result = subprocess.run(
+            [
+                str(FFMPEG_FILE),
+                '-v', 'error',
+                '-i', str(imageFile),
+                '-f', 'rawvideo',
+                '-pix_fmt', 'rgb24',
+                '-',
+            ],
+            capture_output=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        center = (16 // 2 * 16 + 16 // 2) * 3
+        return tuple(result.stdout[center:center + 3])
+
+    def getDominantColor(self, imageFile):
+        pixel = self.getCenterPixel(imageFile)
+        dominantChannel = max(range(3), key=lambda index: pixel[index])
+        self.assertGreater(
+            pixel[dominantChannel],
+            min(pixel) + 30,
+            f'Expected a distinct color, got RGB {pixel}',
+        )
+        return ('red', 'green', 'blue')[dominantChannel]
+
     def tearDown(self):
         self.tempDirectory.cleanup()
 
@@ -78,15 +110,27 @@ class ExtractorIntegrationTests(unittest.TestCase):
     def test_every_n_frames_extracts_expected_count(self):
         outputFiles = self.runExtraction(0, frameInterval='2')
         self.assertEqual(len(outputFiles), 2)
+        self.assertEqual(
+            [self.getDominantColor(file) for file in sorted(outputFiles)],
+            ['red', 'blue'],
+        )
 
     def test_specific_frame_numbers_extract_expected_count(self):
         outputFiles = self.runExtraction(1, specificFrames='1,2')
         self.assertEqual(len(outputFiles), 2)
+        self.assertEqual(
+            [self.getDominantColor(file) for file in sorted(outputFiles)],
+            ['green', 'blue'],
+        )
 
     def test_specific_pts_values_extract_expected_count(self):
         specificPts = f'{self.ptsValues[0]},{self.ptsValues[1]}'
         outputFiles = self.runExtraction(2, specificFrames=specificPts)
         self.assertEqual(len(outputFiles), 2)
+        self.assertEqual(
+            [self.getDominantColor(file) for file in sorted(outputFiles)],
+            ['red', 'green'],
+        )
 
 
 if __name__ == '__main__':
