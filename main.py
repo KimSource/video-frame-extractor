@@ -156,6 +156,10 @@ class App:
 
         self.methodEveryNFramesNEntry = tkinter.Entry(self.methodEveryNFramesParamsSection, textvariable = self.methodEveryNFramesN)
         self.methodEveryNFramesNEntry.grid(column = 1, row = 0, sticky = 'EW')
+        self.methodEveryNFramesNEntry.configure(
+            validate = 'key',
+            validatecommand = (self.root.register(self.validateFrameInterval), '%P'),
+        )
 
         self.methodSpecificFramesMethod1Radio = tkinter.Radiobutton(self.methodSection, text = 'Specific frames (Method 1)', value = 1, variable = self.methodRadioVariety)
         self.methodSpecificFramesMethod1Radio.grid(column = 0, row = 2, sticky = 'W')
@@ -172,6 +176,14 @@ class App:
 
         self.methodSpecificFramesEntry = tkinter.Entry(self.methodSpecificFramesParamsSection, textvariable = self.methodSpecificFrames)
         self.methodSpecificFramesEntry.grid(column = 0, row = 1, sticky = 'EW')
+        self.methodSpecificFramesEntry.configure(
+            validate = 'key',
+            validatecommand = (self.root.register(self.validateSpecificFrames), '%P'),
+        )
+
+        self.methodEveryNFramesRadio.configure(command = self.updateMethodInputs)
+        self.methodSpecificFramesMethod1Radio.configure(command = self.updateMethodInputs)
+        self.methodSpecificFramesMethod2Radio.configure(command = self.updateMethodInputs)
 
         self.ffmpegSection = tkinter.LabelFrame(root, text = 'FFmpeg')
         self.ffmpegSection.grid(column = 0, row = 2, padx = 8, pady = 4, sticky = 'NSEW')
@@ -274,7 +286,26 @@ class App:
         self.customFfmpegVersionLabel.configure(text = 'Not selected')
         threading.Thread(target = self.checkFfmpegVersions, daemon = True).start()
         self.updateCommand()
+        self.updateMethodInputs()
         self.updateExtractButton()
+
+    @staticmethod
+    def validateFrameInterval(value):
+        """Allow an empty value while editing, or a positive integer."""
+        return value == '' or value.isdigit()
+
+    @staticmethod
+    def validateSpecificFrames(value):
+        """Allow only non-negative integers separated by spaces or commas."""
+        return value == '' or re.fullmatch(r'[0-9]*(?:[ ,]+[0-9]*)*', value) is not None
+
+    def updateMethodInputs(self):
+        if self.methodRadioVariety.get() == 0:
+            self.methodEveryNFramesNEntry.configure(state = NORMAL)
+            self.methodSpecificFramesEntry.configure(state = DISABLED)
+        else:
+            self.methodEveryNFramesNEntry.configure(state = DISABLED)
+            self.methodSpecificFramesEntry.configure(state = NORMAL)
 
     def checkFfmpegVersions(self):
         localVersion = getFfmpegVersion(getLocalFfmpegFile())
