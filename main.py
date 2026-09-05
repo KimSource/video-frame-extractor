@@ -1,10 +1,12 @@
 import re
 import os
 import sys
+import subprocess
 import tkinter
 from tkinter.constants import DISABLED, NORMAL
 import tkinter.ttk
 import tkinter.filedialog
+import tkinter.messagebox
 
 inputFileTypes = (
     ('Video files', '*.avi'),
@@ -164,12 +166,32 @@ class App:
             self.outputDirectory.set(selected)
 
     def startExtract(self):
-        os.system('start cmd /c ' + ' '.join(self.getCommand()) + ' ^& pause')
+        try:
+            result = subprocess.run(
+                self.getCommandArgs(),
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+            )
+        except OSError as error:
+            tkinter.messagebox.showerror(
+                'Unable to run FFmpeg',
+                str(error),
+            )
+            return
+
+        if result.returncode != 0:
+            tkinter.messagebox.showerror(
+                'Extraction failed',
+                result.stderr or f'FFmpeg exited with code {result.returncode}',
+            )
 
     def updateCommand(self):
         self.commandToRunText.config(state = tkinter.NORMAL)
         self.commandToRunText.delete('1.0', tkinter.END)
-        self.commandToRunText.insert('1.0', ' '.join(self.getCommand()))
+        self.commandToRunText.insert('1.0', self.getDisplayCommand())
         self.commandToRunText.config(state = tkinter.DISABLED)
 
     def updateCommandAndQuality(self):
@@ -194,16 +216,19 @@ class App:
     def getSelect(self):
         select = ''
         if self.methodRadioVariety.get() == 0:
-            select = "'not(mod(n,{n}))'".format(n = self.methodEveryNFramesN.get().strip())
+            # The comma separates filters in FFmpeg's filter graph syntax.
+            # Escape it because the command is now passed directly to FFmpeg,
+            # without a shell that would have handled the quoting.
+            select = r'not(mod(n\,{n}))'.format(n = self.methodEveryNFramesN.get().strip())
         elif self.methodRadioVariety.get() == 1:
             frames =  re.compile(' +| *,+ *').split(self.methodSpecificFrames.get().strip())
-            select = "'" + '+'.join(['eq(n,{n})'.format(n = n) for n in frames]) + "'"
+            select = '+'.join(['eq(n,{n})'.format(n = n) for n in frames])
         else:
             frames =  re.compile(' +| *,+ *').split(self.methodSpecificFrames.get().strip())
-            select = "'" + '+'.join(['eq(pts,{pts})'.format(pts = pts) for pts in frames]) + "'"
+            select = '+'.join(['eq(pts,{pts})'.format(pts = pts) for pts in frames])
         return 'select={select}'.format(select = select)
 
-    def getCommand(self):
+    def getCommandArgs(self):
         jpgQualityOption = []
         if self.outputFileType.get() == '.jpg':
             jpgQualityOption = [
@@ -213,7 +238,7 @@ class App:
 
         webpQualityOption = []
         if self.outputFileType.get() == '.webp':
-            lossless = self.outputLossless.get() == True;
+            lossless = self.outputLossless.get() == True
             webpQualityOption = [
                 '-qscale:v',
                 str(int(self.outputWebpQualityScale.get())),
@@ -224,17 +249,22 @@ class App:
         return [
             'ffmpeg\\bin\\ffmpeg.exe',
             '-i',
-            '"' + self.inputFile.get() + '"',
+            self.inputFile.get(),
             '-vf',
             self.getSelect(),
-            '-vsync',
-            '0',
+            '-fps_mode',
+            'passthrough',
             '-frame_pts',
             '1',
             *jpgQualityOption,
             *webpQualityOption,
-            '"' + self.outputDirectory.get() + '/%d' + self.outputFileType.get() + '"'
+            self.outputDirectory.get().rstrip('/\\')
+            + '/%d'
+            + self.outputFileType.get(),
         ]
+
+    def getDisplayCommand(self):
+        return subprocess.list2cmdline(self.getCommandArgs())
 
 if __name__ == '__main__':
     window = tkinter.Tk()
