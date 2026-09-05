@@ -9,6 +9,7 @@ from tkinter.constants import DISABLED, NORMAL
 import tkinter.ttk
 import tkinter.filedialog
 import tkinter.messagebox
+import re
 from extractor import build_command_args, build_select_filter, validate_inputs
 
 inputFileTypes = (
@@ -32,6 +33,37 @@ def getLocalFfmpegFile():
         baseDirectory = os.path.dirname(os.path.abspath(__file__))
 
     return os.path.join(baseDirectory, 'ffmpeg', 'bin', 'ffmpeg.exe')
+
+def getFfmpegVersion(ffmpegFile):
+    if not ffmpegFile or not os.path.isfile(ffmpegFile):
+        return 'Not detected'
+
+    try:
+        result = subprocess.run(
+            [ffmpegFile, '-version'],
+            capture_output = True,
+            text = True,
+            timeout = 3,
+            check = False,
+            creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return 'Not detected'
+
+    firstLine = (result.stdout or result.stderr).splitlines()
+    if not firstLine:
+        return 'Not detected'
+
+    versionMarker = ' version '
+    if versionMarker not in firstLine[0]:
+        return 'Not detected'
+    version = firstLine[0].split(versionMarker, 1)[1].split()[0]
+    versionParts = version.split('-')
+    if re.fullmatch(r'\d{4}', versionParts[0]) and len(versionParts) >= 3:
+        shortVersion = '-'.join(versionParts[:3])
+    else:
+        shortVersion = versionParts[0]
+    return f'v{shortVersion}'
 
 class App:
     def __init__(self, root):
@@ -150,6 +182,8 @@ class App:
             variable = self.ffmpegSource,
         )
         self.localFfmpegRadio.grid(column = 0, row = 0, padx = 4, sticky = 'W')
+        self.localFfmpegVersionLabel = tkinter.Label(self.ffmpegSection, text = '')
+        self.localFfmpegVersionLabel.grid(column = 1, row = 0, padx = 4, sticky = 'W')
 
         self.systemFfmpegRadio = tkinter.Radiobutton(
             self.ffmpegSection,
@@ -158,6 +192,8 @@ class App:
             variable = self.ffmpegSource,
         )
         self.systemFfmpegRadio.grid(column = 0, row = 1, padx = 4, sticky = 'W')
+        self.systemFfmpegVersionLabel = tkinter.Label(self.ffmpegSection, text = '')
+        self.systemFfmpegVersionLabel.grid(column = 1, row = 1, padx = 4, sticky = 'W')
 
         self.infoSection = tkinter.Frame(root)
         self.infoSection.grid(column = 0, row = 3, padx = 8, pady = 4, sticky = 'NSEW')
@@ -200,8 +236,20 @@ class App:
         self.methodSpecificFrames.trace_add('write', lambda name, index, mode: self.updateCommand())
         self.ffmpegSource.trace_add('write', lambda name, index, mode: self.updateCommand())
 
+        self.localFfmpegVersionLabel.configure(text = 'Checking...')
+        self.systemFfmpegVersionLabel.configure(text = 'Checking...')
+        threading.Thread(target = self.checkFfmpegVersions, daemon = True).start()
         self.updateCommand()
         self.updateExtractButton()
+
+    def checkFfmpegVersions(self):
+        localVersion = getFfmpegVersion(getLocalFfmpegFile())
+        systemVersion = getFfmpegVersion(shutil.which('ffmpeg'))
+        self.root.after(0, lambda: self.updateFfmpegVersionLabels(localVersion, systemVersion))
+
+    def updateFfmpegVersionLabels(self, localVersion, systemVersion):
+        self.localFfmpegVersionLabel.configure(text = localVersion)
+        self.systemFfmpegVersionLabel.configure(text = systemVersion)
 
     def selectInputFile(self):
         selected = tkinter.filedialog.askopenfilename(title = 'Select File', filetypes = inputFileTypes)
