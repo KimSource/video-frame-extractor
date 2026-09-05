@@ -587,6 +587,15 @@ class App:
         if self.isShuttingDown:
             return
 
+        if self.isExtracting:
+            shouldClose = tkinter.messagebox.askyesno(
+                'Extraction in progress',
+                'Frame extraction is still in progress. Do you want to stop it and exit?',
+                parent = self.root,
+            )
+            if not shouldClose:
+                return
+
         self.isShuttingDown = True
         self.stopExtractProcess()
         self.root.destroy()
