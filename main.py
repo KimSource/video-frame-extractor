@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import subprocess
+import threading
 import tkinter
 from tkinter.constants import DISABLED, NORMAL
 import tkinter.ttk
@@ -44,6 +45,9 @@ class App:
         self.methodEveryNFramesN = tkinter.StringVar()
         self.methodSpecificFrames = tkinter.StringVar()
         self.ffmpegSource = tkinter.IntVar(value = 0)
+        self.extractProcess = None
+        self.isExtracting = False
+        self.isCancelRequested = False
 
         self.root = root
 
@@ -164,8 +168,20 @@ class App:
         self.commandToRunText.grid(column = 0, row = 1, sticky = 'EW')
         self.commandToRunText.config(state = tkinter.DISABLED)
 
+        # Keep this area separate so the status label can later be replaced
+        # with a determinate or indeterminate progress bar.
+        self.progressSection = tkinter.LabelFrame(root, text = 'Progress')
+        self.progressSection.grid(column = 0, row = 4, padx = 8, pady = 4, sticky = 'NSEW')
+        self.progressSection.grid_columnconfigure(0, weight = 1)
+
+        self.progressStatusLabel = tkinter.Label(self.progressSection, text = 'Ready')
+        self.progressStatusLabel.grid(column = 0, row = 0, padx = 4, sticky = 'W')
+
+        self.cancelButton = tkinter.Button(self.progressSection, text = 'Cancel', command = self.cancelExtract, state = DISABLED)
+        self.cancelButton.grid(column = 1, row = 0, padx = 4)
+
         self.actionSection = tkinter.Frame(root)
-        self.actionSection.grid(column = 0, row = 4, padx = 8, pady = 4, sticky = 'NSEW')
+        self.actionSection.grid(column = 0, row = 5, padx = 8, pady = 4, sticky = 'NSEW')
         self.actionSection.grid_columnconfigure(0, weight = 1)
 
         self.extractButton = tkinter.Button(self.actionSection, text = 'Extract', command = self.startExtract)
@@ -205,30 +221,65 @@ class App:
             self.updateExtractButton()
             return
 
-        try:
-            result = subprocess.run(
-                self.getCommandArgs(),
-                check=False,
-                capture_output=True,
-                text=True,
-                encoding='utf-8',
-                errors='replace',
-            )
-        except OSError as error:
-            tkinter.messagebox.showerror(
-                'Unable to run FFmpeg',
-                str(error),
-            )
-            return
+        self.extractButton.configure(state = DISABLED)
+        self.cancelButton.configure(state = NORMAL)
+        self.progressStatusLabel.configure(text = 'Extracting...')
+        self.isExtracting = True
+        self.isCancelRequested = False
+        threading.Thread(target = self.runExtract, args = (self.getCommandArgs(),), daemon = True).start()
 
-        if result.returncode != 0:
+    def runExtract(self, commandArgs):
+        try:
+            self.extractProcess = subprocess.Popen(
+                commandArgs,
+                stdout = subprocess.PIPE,
+                stderr = subprocess.PIPE,
+                text = True,
+                encoding = 'utf-8',
+                errors = 'replace',
+            )
+            stdout, stderr = self.extractProcess.communicate()
+            returncode = self.extractProcess.returncode
+            self.root.after(0, self.finishExtract, returncode, stderr)
+        except OSError as error:
+            self.root.after(0, self.failExtract, str(error))
+
+    def cancelExtract(self):
+        self.isCancelRequested = True
+        if self.extractProcess is not None and self.extractProcess.poll() is None:
+            self.extractProcess.terminate()
+            self.progressStatusLabel.configure(text = 'Cancelling...')
+            self.cancelButton.configure(state = DISABLED)
+
+    def finishExtract(self, returncode, stderr):
+        self.extractProcess = None
+        self.isExtracting = False
+        self.cancelButton.configure(state = DISABLED)
+        if self.isCancelRequested:
+            self.progressStatusLabel.configure(text = 'Cancelled')
+        elif returncode == 0:
+            self.progressStatusLabel.configure(text = 'Completed')
+        else:
+            self.progressStatusLabel.configure(text = 'Failed')
             tkinter.messagebox.showerror(
                 'Extraction failed',
-                result.stderr or f'FFmpeg exited with code {result.returncode}',
+                stderr or f'FFmpeg exited with code {returncode}',
             )
+        self.updateExtractButton()
+
+    def failExtract(self, message):
+        self.extractProcess = None
+        self.isExtracting = False
+        self.cancelButton.configure(state = DISABLED)
+        if self.isCancelRequested:
+            self.progressStatusLabel.configure(text = 'Cancelled')
+        else:
+            self.progressStatusLabel.configure(text = 'Failed')
+            tkinter.messagebox.showerror('Unable to run FFmpeg', message)
+        self.updateExtractButton()
 
     def updateExtractButton(self):
-        state = NORMAL if not self.validateInputs() else DISABLED
+        state = NORMAL if not self.isExtracting and not self.validateInputs() else DISABLED
         self.extractButton.configure(state = state)
 
     def validateInputs(self):
