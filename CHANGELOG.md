@@ -1,3 +1,24 @@
+## [0.2.0]
+
+### Added
+
+- Add extraction progress reporting.
+- Add extraction cancellation.
+- Add automated FFmpeg integration tests for extracted frame content.
+
+### Changed
+
+- Add custom FFmpeg executable selection.
+- Clarify the frame selection method labels and input meanings.
+- Validate frame intervals when building FFmpeg commands.
+- Confirm before closing the application during extraction.
+
+### Fixed
+
+- Fix specific frame extraction filters for frame numbers and PTS values.
+- Prevent extraction from starting when cancellation is requested during setup.
+- Reject GUI-based executables selected as custom FFmpeg files.
+
 ## [0.1.0]
 
 ### Added
@@ -51,8 +72,9 @@
 - Initial Release
 - Add readme
 
-[0.0.4]: https://github.com/KimSource/video-frame-extractor/releases/tag/v0.0.4
+[0.2.0]: https://github.com/KimSource/video-frame-extractor/releases/tag/v0.2.0
 [0.1.0]: https://github.com/KimSource/video-frame-extractor/releases/tag/v0.1.0
+[0.0.4]: https://github.com/KimSource/video-frame-extractor/releases/tag/v0.0.4
 [0.0.3]: https://github.com/KimSource/video-frame-extractor/releases/tag/v0.0.3
 [0.0.2]: https://github.com/KimSource/video-frame-extractor/releases/tag/v0.0.2
 [0.0.1]: https://github.com/KimSource/video-frame-extractor/releases/tag/v0.0.1

@@ -1,6 +1,6 @@
 [project]
 name = "video-frame-extractor"
-version = "0.1.0"
+version = "0.2.0"
 description = "A Windows GUI for extracting video frames with FFmpeg"
 readme = "README.md"
 license = "0BSD"
