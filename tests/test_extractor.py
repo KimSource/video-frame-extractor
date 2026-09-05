@@ -62,6 +62,8 @@ class ExtractorTests(unittest.TestCase):
             'ffmpeg', 'input.mp4', 'output', '.webp', 2, 80, True,
             1, '', '0,2',
         )
+        self.assertIn('-c:v', args)
+        self.assertIn('libwebp', args)
         self.assertIn('-lossless', args)
         self.assertIn('1', args)
         self.assertIn('80', args)

@@ -79,6 +79,8 @@ def build_command_args(
         options.extend(['-qscale:v', str(int(jpg_quality))])
     elif output_file_type == '.webp':
         options.extend([
+            '-c:v',
+            'libwebp',
             '-qscale:v',
             str(int(webp_quality)),
             '-lossless',
