@@ -185,6 +185,7 @@ class App:
         self.ffmpegSource.trace_add('write', lambda name, index, mode: self.updateCommand())
 
         self.updateCommand()
+        self.updateExtractButton()
 
     def selectInputFile(self):
         selected = tkinter.filedialog.askopenfilename(title = 'Select File', filetypes = inputFileTypes)
@@ -197,6 +198,15 @@ class App:
             self.outputDirectory.set(selected)
 
     def startExtract(self):
+        errors = self.validateInputs()
+        if errors:
+            tkinter.messagebox.showerror(
+                'Invalid input',
+                '\n'.join(f'- {error}' for error in errors),
+            )
+            self.updateExtractButton()
+            return
+
         try:
             result = subprocess.run(
                 self.getCommandArgs(),
@@ -219,16 +229,64 @@ class App:
                 result.stderr or f'FFmpeg exited with code {result.returncode}',
             )
 
+    def updateExtractButton(self):
+        state = NORMAL if not self.validateInputs() else DISABLED
+        self.extractButton.configure(state = state)
+
+    def parseSpecificFrames(self):
+        value = self.methodSpecificFrames.get().strip()
+        if not value:
+            raise ValueError('Specific frames are required.')
+
+        frames = re.split(r'[\s,]+', value)
+        if any(not frame.isdigit() for frame in frames):
+            raise ValueError('Specific frames must be non-negative integers.')
+
+        return frames
+
+    def validateInputs(self):
+        errors = []
+
+        input_file = self.inputFile.get().strip()
+        if not input_file:
+            errors.append('Input file is required.')
+        elif not os.path.isfile(input_file):
+            errors.append('Input file does not exist.')
+
+        output_directory = self.outputDirectory.get().strip()
+        if not output_directory:
+            errors.append('Output directory is required.')
+        elif not os.path.isdir(output_directory):
+            errors.append('Output directory does not exist.')
+
+        if self.methodRadioVariety.get() == 0:
+            frame_interval = self.methodEveryNFramesN.get().strip()
+            if not frame_interval.isdigit() or int(frame_interval) < 1:
+                errors.append('The frame interval must be a positive integer.')
+        else:
+            try:
+                self.parseSpecificFrames()
+            except ValueError as error:
+                errors.append(str(error))
+
+        try:
+            self.getFfmpegFile()
+        except FileNotFoundError as error:
+            errors.append(str(error))
+
+        return errors
+
     def updateCommand(self):
         try:
             displayCommand = self.getDisplayCommand()
-        except FileNotFoundError as error:
+        except (FileNotFoundError, ValueError) as error:
             displayCommand = str(error)
 
         self.commandToRunText.config(state = tkinter.NORMAL)
         self.commandToRunText.delete('1.0', tkinter.END)
         self.commandToRunText.insert('1.0', displayCommand)
         self.commandToRunText.config(state = tkinter.DISABLED)
+        self.updateExtractButton()
 
     def updateCommandAndQuality(self):
         self.updateCommand()
@@ -257,10 +315,10 @@ class App:
             # without a shell that would have handled the quoting.
             select = r'not(mod(n\,{n}))'.format(n = self.methodEveryNFramesN.get().strip())
         elif self.methodRadioVariety.get() == 1:
-            frames =  re.compile(' +| *,+ *').split(self.methodSpecificFrames.get().strip())
+            frames = self.parseSpecificFrames()
             select = '+'.join(['eq(n,{n})'.format(n = n) for n in frames])
         else:
-            frames =  re.compile(' +| *,+ *').split(self.methodSpecificFrames.get().strip())
+            frames = self.parseSpecificFrames()
             select = '+'.join(['eq(pts,{pts})'.format(pts = pts) for pts in frames])
         return 'select={select}'.format(select = select)
 
