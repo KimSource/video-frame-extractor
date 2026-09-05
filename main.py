@@ -1,4 +1,3 @@
-import re
 import os
 import sys
 import shutil
@@ -8,6 +7,7 @@ from tkinter.constants import DISABLED, NORMAL
 import tkinter.ttk
 import tkinter.filedialog
 import tkinter.messagebox
+from extractor import build_command_args, build_select_filter, validate_inputs
 
 inputFileTypes = (
     ('Video files', '*.avi'),
@@ -233,48 +233,20 @@ class App:
         state = NORMAL if not self.validateInputs() else DISABLED
         self.extractButton.configure(state = state)
 
-    def parseSpecificFrames(self):
-        value = self.methodSpecificFrames.get().strip()
-        if not value:
-            raise ValueError('Specific frames are required.')
-
-        frames = re.split(r'[\s,]+', value)
-        if any(not frame.isdigit() for frame in frames):
-            raise ValueError('Specific frames must be non-negative integers.')
-
-        return frames
-
     def validateInputs(self):
-        errors = []
-
-        input_file = self.inputFile.get().strip()
-        if not input_file:
-            errors.append('Input file is required.')
-        elif not os.path.isfile(input_file):
-            errors.append('Input file does not exist.')
-
-        output_directory = self.outputDirectory.get().strip()
-        if not output_directory:
-            errors.append('Output directory is required.')
-        elif not os.path.isdir(output_directory):
-            errors.append('Output directory does not exist.')
-
-        if self.methodRadioVariety.get() == 0:
-            frame_interval = self.methodEveryNFramesN.get().strip()
-            if not frame_interval.isdigit() or int(frame_interval) < 1:
-                errors.append('The frame interval must be a positive integer.')
-        else:
-            try:
-                self.parseSpecificFrames()
-            except ValueError as error:
-                errors.append(str(error))
-
         try:
-            self.getFfmpegFile()
-        except FileNotFoundError as error:
-            errors.append(str(error))
+            ffmpeg_file = self.getFfmpegFile()
+        except FileNotFoundError:
+            ffmpeg_file = None
 
-        return errors
+        return validate_inputs(
+            self.inputFile.get(),
+            self.outputDirectory.get(),
+            self.methodRadioVariety.get(),
+            self.methodEveryNFramesN.get(),
+            self.methodSpecificFrames.get(),
+            ffmpeg_file,
+        )
 
     def updateCommand(self):
         try:
@@ -308,19 +280,11 @@ class App:
         self.outputWebpQualityValueLabel.config(text = str(int(self.outputWebpQualityScale.get())))
 
     def getSelect(self):
-        select = ''
-        if self.methodRadioVariety.get() == 0:
-            # The comma separates filters in FFmpeg's filter graph syntax.
-            # Escape it because the command is now passed directly to FFmpeg,
-            # without a shell that would have handled the quoting.
-            select = r'not(mod(n\,{n}))'.format(n = self.methodEveryNFramesN.get().strip())
-        elif self.methodRadioVariety.get() == 1:
-            frames = self.parseSpecificFrames()
-            select = '+'.join(['eq(n,{n})'.format(n = n) for n in frames])
-        else:
-            frames = self.parseSpecificFrames()
-            select = '+'.join(['eq(pts,{pts})'.format(pts = pts) for pts in frames])
-        return 'select={select}'.format(select = select)
+        return build_select_filter(
+            self.methodRadioVariety.get(),
+            self.methodEveryNFramesN.get(),
+            self.methodSpecificFrames.get(),
+        )
 
     def getFfmpegFile(self):
         if self.ffmpegSource.get() == 0:
@@ -340,39 +304,18 @@ class App:
         )
 
     def getCommandArgs(self):
-        jpgQualityOption = []
-        if self.outputFileType.get() == '.jpg':
-            jpgQualityOption = [
-                '-qscale:v',
-                str(int(self.outputJpgQualityScale.get()))
-            ]
-
-        webpQualityOption = []
-        if self.outputFileType.get() == '.webp':
-            lossless = self.outputLossless.get() == True
-            webpQualityOption = [
-                '-qscale:v',
-                str(int(self.outputWebpQualityScale.get())),
-                '-lossless',
-                '1' if lossless else '0'
-            ]
-
-        return [
+        return build_command_args(
             self.getFfmpegFile(),
-            '-i',
             self.inputFile.get(),
-            '-vf',
-            self.getSelect(),
-            '-fps_mode',
-            'passthrough',
-            '-frame_pts',
-            '1',
-            *jpgQualityOption,
-            *webpQualityOption,
-            self.outputDirectory.get().rstrip('/\\')
-            + '/%d'
-            + self.outputFileType.get(),
-        ]
+            self.outputDirectory.get(),
+            self.outputFileType.get(),
+            self.outputJpgQualityScale.get(),
+            self.outputWebpQualityScale.get(),
+            self.outputLossless.get() == True,
+            self.methodRadioVariety.get(),
+            self.methodEveryNFramesN.get(),
+            self.methodSpecificFrames.get(),
+        )
 
     def getDisplayCommand(self):
         return subprocess.list2cmdline(self.getCommandArgs())
