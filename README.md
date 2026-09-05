@@ -10,6 +10,7 @@ Read this in other languages: [English](README.md), [한국어](README.ko-KR.md)
 - Save frames as JPG, PNG, or WebP.
 - Adjust JPG and WebP quality, including lossless WebP output.
 - Preview the FFmpeg command before extraction.
+- Show extraction progress and cancel an extraction in progress.
 
 ## Requirements
 
@@ -28,7 +29,19 @@ video-frame-extractor/
 ```
 
 You can also select an `ffmpeg.exe` found on the system `PATH` in the application's
-FFmpeg section.
+FFmpeg section, or choose an executable at a custom location.
+
+## Frame Selection
+
+The application supports three extraction methods:
+
+- Every Nth frame.
+- Specific frame numbers, starting at 0.
+- Specific PTS (presentation timestamp) values.
+
+During extraction, the progress section shows the current status and progress. You
+can cancel an extraction, and the application asks for confirmation before closing
+while an extraction is still running.
 
 ## Running from Source
 
