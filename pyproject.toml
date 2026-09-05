@@ -3,6 +3,8 @@ name = "video-frame-extractor"
 version = "0.1.0.dev0"
 description = "A Windows GUI for extracting video frames with FFmpeg"
 readme = "README.md"
+license = "0BSD"
+license-files = ["LICENSE"]
 requires-python = ">=3.14"
 dependencies = []
 

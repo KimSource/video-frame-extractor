@@ -71,3 +71,7 @@ dist/
 ```
 
 미리 빌드된 버전은 [Releases 페이지](https://github.com/KimSource/video-frame-extractor/releases)에서 받을 수 있습니다.
+
+## 라이선스
+
+이 프로젝트는 [BSD Zero Clause License](LICENSE)로 배포됩니다.

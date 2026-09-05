@@ -71,3 +71,7 @@ dist/
 ```
 
 Prebuilt versions are available on the [Releases page](https://github.com/KimSource/video-frame-extractor/releases).
+
+## License
+
+This project is released under the [BSD Zero Clause License](LICENSE).
