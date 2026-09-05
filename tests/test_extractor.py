@@ -28,6 +28,10 @@ class ExtractorTests(unittest.TestCase):
             r'select=not(mod(n\,3))',
         )
 
+    def test_build_select_filter_rejects_empty_every_n_frames(self):
+        with self.assertRaisesRegex(ValueError, 'positive integer'):
+            build_select_filter(0, '', '')
+
     def test_build_select_filter_for_specific_n_frames(self):
         self.assertEqual(
             build_select_filter(1, '', '1, 4'),

@@ -51,7 +51,10 @@ def validate_inputs(
 
 def build_select_filter(method, frame_interval, specific_frames):
     if method == 0:
-        select = r'not(mod(n\,{n}))'.format(n=frame_interval.strip())
+        interval = frame_interval.strip()
+        if not interval.isdigit() or int(interval) < 1:
+            raise ValueError('The frame interval must be a positive integer.')
+        select = r'not(mod(n\,{n}))'.format(n=interval)
     elif method == 1:
         frames = parse_specific_frames(specific_frames)
         select = '+'.join(f'eq(n,{frame})' for frame in frames)
