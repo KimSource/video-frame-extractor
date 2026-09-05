@@ -60,11 +60,10 @@ The tests use Python's standard-library `unittest` module.
 
 ## Building the Executable
 
-Activate the virtual environment and install PyInstaller:
+Set up the virtual environment and install the declared build dependencies:
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-python -m pip install pyinstaller
+```text
+.\setup-venv.bat
 ```
 
 Then run:

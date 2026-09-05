@@ -61,11 +61,10 @@ FFmpeg 섹션에서 사용할 실행 파일을 선택합니다.
 
 ## 실행 파일 빌드
 
-가상환경을 활성화하고 PyInstaller를 설치합니다.
+가상환경을 설정하고 선언된 빌드 의존성을 설치합니다.
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-python -m pip install pyinstaller
+```text
+.\setup-venv.bat
 ```
 
 그다음 다음 명령을 실행합니다.

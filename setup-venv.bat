@@ -10,15 +10,21 @@ if errorlevel 1 (
 
 if exist ".venv\Scripts\python.exe" (
     echo Virtual environment already exists at .venv
-    exit /b 0
+) else (
+    python -m venv .venv
+    if errorlevel 1 (
+        echo Failed to create the virtual environment.
+        exit /b 1
+    )
+    echo Virtual environment created at .venv
 )
 
-python -m venv .venv
+.venv\Scripts\python.exe -m pip install --group build
 if errorlevel 1 (
-    echo Failed to create the virtual environment.
+    echo Failed to install the build dependencies.
     exit /b 1
 )
 
-echo Virtual environment created at .venv
+echo Build dependencies installed.
 echo PowerShell: .\.venv\Scripts\Activate.ps1
 echo Command Prompt: call .venv\Scripts\activate.bat
